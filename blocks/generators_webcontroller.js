@@ -21,15 +21,7 @@ def _closedCallback(webSocket) :
 };
 
 Blockly.Python['web_onpath_handlecmd'] = function(block) {
-  Blockly.Python.definitions_['class_TestServer'] = 'class TestServer(WebSocketServer):\n'+
-                    '  def __init__(self):\n'+
-                    '    super().__init__("index.html", 100)\n'+ 
-                    '  def _make_client(self, conn):\n'+ 
-                    '    return TestClient(conn)\n'+
-                    'class TestClient(WebSocketClient):\n'+
-                    '  value = 0\n'+
-                    '  def __init__(self, conn):\n'+
-                    '    super().__init__(conn)\n';
+  // 1. Setup variables for the callback logic
   var globals = [];
   var varName;
   var workspace = block.workspace;
@@ -41,43 +33,56 @@ Blockly.Python['web_onpath_handlecmd'] = function(block) {
           Blockly.VARIABLE_CATEGORY_NAME));
     }
   }
-  // Add developer variables.
   var devVarList = Blockly.Variables.allDeveloperVariables(workspace);
   for (var i = 0; i < devVarList.length; i++) {
     globals.push(Blockly.Python.variableDB_.getName(devVarList[i],
         Blockly.Names.DEVELOPER_VARIABLE_TYPE));
   }
 
-  globals = globals.length ?
-      Blockly.Python.INDENT + 'global ' + globals.join(', ') + '\n' : '';
- 
+  // 2. Prepare indentation for the nested statements
   var statements_callback = Blockly.Python.statementToCode(block, 'callback');
-      statements_callback = '    '+statements_callback.replace(/\n/g, '\n    ');
-  globals = '    ' + globals;
-  var functionName = Blockly.Python.provideFunction_(
-    '_recvTextCallback',
-    ['  def process(self):',
-    '    try:',
-    '      rr_data = self.connection.read()',
-    '      if not rr_data:',
-    '        previousValue = self.value',
-    '        self.value = random.randint(0,200)',
-    '        if previousValue != self.value:',
-    '          self.connection.write(str(self.value))',
-    '        return',
-    '      rr_data = rr_data.decode("utf-8")',
-    '      rr_data = rr_data.split(" ")',
-    '      temp_msg = rr_data[0].split("#")',
-    '      msg = temp_msg[len(temp_msg)-2]',
-	globals,
-    statements_callback || Blockly.Python.PASS]);
-  Blockly.Python.definitions_['class_TestClient'] = '    except ClientClosedError:\n'+
-                                                    '      print("Connection close error")\n'+
-                                                    '      self.connection.close()  ';
+  // Double indent (6 spaces) to stay inside 'try' which is inside 'def process'
+  statements_callback = '    ' + statements_callback.replace(/\n/g, '\n      ');
+  
+  var globalCode = globals.length ?
+      '      global ' + globals.join(', ') + '\n' : '';
+
+  // 3. Define the classes and the process method as one block in definitions_
+  // This ensures the method stays inside the class scope
+  Blockly.Python.definitions_['class_WebSocketServerSystem'] = 
+    'class TestServer(WebSocketServer):\n' +
+    '  def __init__(self):\n' +
+    '    super().__init__("index.html", 100)\n' + 
+    '  def _make_client(self, conn):\n' + 
+    '    return TestClient(conn)\n' +
+    '\n' +
+    'class TestClient(WebSocketClient):\n' +
+    '  value = 0\n' +
+    '  def __init__(self, conn):\n' +
+    '    super().__init__(conn)\n' +
+    '\n' +
+    '  def process(self):\n' +
+    '    try:\n' +
+    '      rr_data = self.connection.read()\n' +
+    '      if not rr_data:\n' +
+    '        previousValue = self.value\n' +
+    '        self.value = random.randint(0,200)\n' +
+    '        if previousValue != self.value:\n' +
+    '          self.connection.write(str(self.value))\n' +
+    '        return\n' +
+    '      rr_data = rr_data.decode("utf-8")\n' +
+    '      temp_msg = rr_data.split("#")\n' +
+    '      msg = temp_msg[len(temp_msg)-2]\n' +
+           globalCode + 
+           (statements_callback || '      pass') + '\n' +
+    '    except ClientClosedError:\n' +
+    '      print("Connection close error")\n' +
+    '      self.connection.close()';
 
   var code = '';
   return code;
 };
+
 
 
 Blockly.Python['args_getvalue'] = function(block) {
