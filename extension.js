@@ -1,5 +1,5 @@
 ({
-    name: "Web Remote Control", // Category Name (Originally: 網頁遙控器)
+    name: "Web RC", // Category Name (Originally: 網頁遙控器)
     description: "WebSocket_Server",
     author: "YP & Mason",
     category: "Communication",
